@@ -1,0 +1,18 @@
+name = "NewtonEqLagrange"
+version = "0.1.0"
+defaultTargets = ["NewtonEqLagrange"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[require]]
+name = "physlib"
+scope = "leanprover-community"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[lean_lib]]
+name = "NewtonEqLagrange"
