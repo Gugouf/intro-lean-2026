@@ -12,43 +12,88 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 open scoped Time
 open RealInnerProductSpace
 
-/-- Arbitrary system with mass m, position x, and velocity v -/
-structure System where
-  (m : ℝ)
-  (x : Time → EuclideanSpace ℝ (Fin 1))
-  (V : Time → EuclideanSpace ℝ (Fin 1) → ℝ)
-  m_pos : m > 0
+/-- Here will be formalized the proof that the Euler-Lagrange
+ equation of motion is equivalent to Newton's second law
 
-namespace NewtonEqLagrange
+ i. Introduction
+
+Differently from Newton's law, the Euler-Lagrange equation
+is not limited to cartesian coordinates. This is useful for
+some sistems where is easier to use a more fitting coordinate
+system.
+
+ii. Key result
+
+This study seeks to prove (F = ∂ₜp) ↔ (∂ₜ(∂L/∂v) - ∂L/∂x = 0)
+where L is the Lagrangian of the system, p is the momentum and
+F is the force. -/
+
+structure System where
+  m : ℝ
+  /- The mass of the system -/
+  m_pos : 0 < m
+  /- The mass must be positive -/
 
 variable (S : System)
 
-/-- Definition of kinetic energy and potential energy for the system -/
+/-- Defining kinetic and potential energies for any system-/
+noncomputable def kineticEnergy (xₜ : Time → EuclideanSpace ℝ (Fin 1)) :
+Time → ℝ := fun t =>
+  (1 / (2 : ℝ)) * S.m * ⟪∂ₜ xₜ t, ∂ₜ xₜ t⟫
 
-noncomputable def kineticEnergy : Time → ℝ :=
-  fun t => (1 / 2) * S.m * ⟪∂ₜ S.x t, ∂ₜ S.x t⟫
+def potentialEnergy (x : EuclideanSpace ℝ (Fin 1))
+(V : EuclideanSpace ℝ (Fin 1) → ℝ) : ℝ := V x
 
-def potentialEnergy : Time → ℝ :=
-  fun t => S.V t (S.x t)
+/-- Defining the Lagrangian for any system and proving L = T - V -/
+noncomputable def lagrangian (t : Time) (x : EuclideanSpace ℝ (Fin 1))
+(v : EuclideanSpace ℝ (Fin 1)) (V : EuclideanSpace ℝ (Fin 1) → ℝ)
+ : ℝ :=
+  1 / (2 : ℝ) * S.m * ⟪v, v⟫ - potentialEnergy x V
 
-/-- Lagrangian
-
- Definition -/
-noncomputable def lagrangian (t : Time) :  ℝ :=
-  (1 / 2) * S.m * ⟪∂ₜ S.x t, ∂ₜ S.x t⟫ - S.V t (S.x t)
-
-/-- Showing L = T - V -/
-lemma lagrangian_eq_kinetic_minus_potential (t : Time) :
-    lagrangian S t = kineticEnergy S t - potentialEnergy S t := by
+lemma lagrangian_eq : lagrangian S = fun t x v V =>
+  1 / (2 : ℝ) * S.m * ⟪v, v⟫ - potentialEnergy x V := by
   rfl
 
-#check (gradient (lagrangian S))
+lemma lagrangian_eq_kinetic_minus_potential (t : Time)
+(xₜ : Time → EuclideanSpace ℝ (Fin 1)) (V : EuclideanSpace ℝ (Fin 1) → ℝ) :
+  lagrangian S t (xₜ t) (∂ₜ xₜ t) V =
+  kineticEnergy S xₜ t - potentialEnergy (xₜ t) V := by
+  rfl
 
-/-- TODO: lemmas for grad_pos and grad_vel, define Eq of Motion,
-          state theorem, prove theorem -/
+/-- Defining an arbitrary force -/
+noncomputable def force (x : EuclideanSpace ℝ (Fin 1))
+(V : EuclideanSpace ℝ (Fin 1) → ℝ) : EuclideanSpace ℝ (Fin 1) :=
+  -gradient V x
 
-noncomputable def force (t : Time) : EuclideanSpace ℝ (Fin 1) :=
-  -gradient (fun x => S.V t x) (S.x t)
+lemma gradient_lagrangian_position_eq (t : Time)
+    (x v : EuclideanSpace ℝ (Fin 1))
+    (V : EuclideanSpace ℝ (Fin 1) → ℝ) :
+    gradient (fun x => lagrangian S t x v V) x = force x V := by
+  have h_eq : (fun y : EuclideanSpace ℝ (Fin 1) =>
+  lagrangian S t y v V)
+      = fun y => 1 / (2 : ℝ) * S.m * ⟪v, v⟫ - V y := by
+    funext y; simp only [lagrangian_eq]; rfl
+  rw [h_eq, force]
+  simp only [gradient, fderiv_const_sub, map_neg]
 
-
-end NewtonEqLagrange
+lemma gradient_lagrangian_velocity_eq (t : Time)
+    (x v : EuclideanSpace ℝ (Fin 1))
+    (V : EuclideanSpace ℝ (Fin 1) → ℝ) :
+    gradient (fun v => lagrangian S t x v V) v = S.m • v := by
+    have h_eq : (fun y : EuclideanSpace ℝ (Fin 1) =>
+    lagrangian S t x y V) =
+      fun y => 1 / (2 : ℝ) * S.m * ⟪y, y⟫ - V x := by
+      funext y; simp only [lagrangian_eq]; rfl
+    rw [h_eq]
+    have h_sq : (fun y : EuclideanSpace ℝ (Fin 1) => 1 / (2 : ℝ) * S.m * ⟪y, y⟫ - V x)
+    = fun y => (1 / (2 : ℝ) * S.m) * ‖y‖ ^ 2 - V x := by
+      funext y; rw [real_inner_self_eq_norm_sq]
+    rw [h_sq]
+    have h1 : HasFDerivAt (fun y : EuclideanSpace ℝ (Fin 1) => ‖y‖ ^ 2)
+        (2 • innerSL ℝ v) v := (hasStrictFDerivAt_norm_sq v).hasFDerivAt
+    have h2 := (h1.const_mul (1 / (2 : ℝ) * S.m)).sub_const (V x)
+    rw [gradient, h2.fderiv]
+    apply (InnerProductSpace.toDual ℝ _).injective
+    ext w
+    simp [innerSL_apply_apply]
+    ring
