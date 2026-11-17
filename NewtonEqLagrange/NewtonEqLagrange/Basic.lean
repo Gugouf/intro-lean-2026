@@ -97,3 +97,25 @@ lemma gradient_lagrangian_velocity_eq (t : Time)
     ext w
     simp [innerSL_apply_apply]
     ring
+
+lemma deriv_gradient_lagrangian_velocity_eq
+    (x : EuclideanSpace ℝ (Fin 1))
+    (v : Time → EuclideanSpace ℝ (Fin 1))
+    (V : EuclideanSpace ℝ (Fin 1) → ℝ) (t : Time) :
+    ∂ₜ (fun s => gradient (fun u => lagrangian S s x u V) (v s)) t
+      = ∂ₜ (fun s => S.m • v s) t := by
+  have h : (fun s => gradient (fun u => lagrangian S s x u V) (v s))
+      = fun s => S.m • v s := by
+    funext s
+    exact gradient_lagrangian_velocity_eq S s x (v s) V
+  rw [h]
+
+theorem Newton_eq_Lagrange
+    (x : EuclideanSpace ℝ (Fin 1))
+    (v : Time → EuclideanSpace ℝ (Fin 1))
+    (V : EuclideanSpace ℝ (Fin 1) → ℝ) (t : Time) :
+    ∂ₜ (fun s => S.m • v s) t = force x V ↔
+    ∂ₜ (fun s => gradient (fun u => lagrangian S s x u V) (v s)) t
+      - gradient (fun y => lagrangian S t y (v t) V) x = 0 := by
+  rw [deriv_gradient_lagrangian_velocity_eq S x v V t]
+  rw[gradient_lagrangian_position_eq S t x (v t) V, sub_eq_zero]
