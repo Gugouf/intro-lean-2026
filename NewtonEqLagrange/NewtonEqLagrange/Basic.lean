@@ -65,6 +65,7 @@ noncomputable def force (x : EuclideanSpace ℝ (Fin 3))
 (V : EuclideanSpace ℝ (Fin 3) → ℝ) : EuclideanSpace ℝ (Fin 3) :=
   -gradient V x
 
+/-- Proving ∂L/∂x = F -/
 lemma gradient_lagrangian_position_eq (t : Time)
     (x v : EuclideanSpace ℝ (Fin 3))
     (V : EuclideanSpace ℝ (Fin 3) → ℝ) :
@@ -74,8 +75,11 @@ lemma gradient_lagrangian_position_eq (t : Time)
       = fun y => 1 / (2 : ℝ) * S.m * ⟪v, v⟫ - V y := by
     funext y; simp only [lagrangian_eq]; rfl
   rw [h_eq, force]
+  /- ∂L/∂x = F → ∂(T - V)/∂x = -∂V/∂x
+  Since ∂T/∂x = 0:-/
   simp only [gradient, fderiv_const_sub, map_neg]
 
+/-- Proving ∂L/∂v = p -/
 lemma gradient_lagrangian_velocity_eq (t : Time)
     (x v : EuclideanSpace ℝ (Fin 3))
     (V : EuclideanSpace ℝ (Fin 3) → ℝ) :
@@ -85,10 +89,12 @@ lemma gradient_lagrangian_velocity_eq (t : Time)
       fun y => 1 / (2 : ℝ) * S.m * ⟪y, y⟫ - V x := by
       funext y; simp only [lagrangian_eq]; rfl
     rw [h_eq]
+    /- ∂(T - V)/∂v = m • v-/
     have h_sq : (fun y : EuclideanSpace ℝ (Fin 3) => 1 / (2 : ℝ) * S.m * ⟪y, y⟫ - V x)
     = fun y => (1 / (2 : ℝ) * S.m) * ‖y‖ ^ 2 - V x := by
       funext y; rw [real_inner_self_eq_norm_sq]
     rw [h_sq]
+    /- Just having ⟪v, v⟫ be ‖v‖ ^ 2-/
     have h1 : HasFDerivAt (fun y : EuclideanSpace ℝ (Fin 3) => ‖y‖ ^ 2)
         (2 • innerSL ℝ v) v := (hasStrictFDerivAt_norm_sq v).hasFDerivAt
     have h2 := (h1.const_mul (1 / (2 : ℝ) * S.m)).sub_const (V x)
@@ -97,7 +103,9 @@ lemma gradient_lagrangian_velocity_eq (t : Time)
     ext w
     simp [innerSL_apply_apply]
     ring
+    /- ∂(T - V)/∂v → ∂T/∂v → m • v-/
 
+/-- Using previous lemma to prove ∂ₜ(∂L/∂v) = ∂ₜ(p)-/
 lemma deriv_gradient_lagrangian_velocity_eq
     (x : EuclideanSpace ℝ (Fin 3))
     (v : Time → EuclideanSpace ℝ (Fin 3))
@@ -110,6 +118,7 @@ lemma deriv_gradient_lagrangian_velocity_eq
     exact gradient_lagrangian_velocity_eq S s x (v s) V
   rw [h]
 
+/-- Proving key result using previous lemmas -/
 theorem Newton_eq_Lagrange
     (x : EuclideanSpace ℝ (Fin 3))
     (v : Time → EuclideanSpace ℝ (Fin 3))
